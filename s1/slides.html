@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 1 — Python Internals &amp; Mental Models</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css" id="theme">
+
+<style>
+  :root{
+    --accent:#2b6cb0;
+    --accent2:#e0a800;
+    --ink:#1a1a1a;
+    --muted:#6b7280;
+    --code-bg:#f6f7f9;
+    --code-border:#e2e5ea;
+  }
+  .reveal{ font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); }
+  .reveal .slides{ text-align:left; }
+  .reveal h1, .reveal h2, .reveal h3{
+    font-family: inherit; text-transform:none; letter-spacing:0;
+    color: var(--ink); font-weight:700;
+  }
+  .reveal h1{ font-size: 2.1em; }
+  .reveal h2{ font-size: 1.5em; border-bottom: 3px solid var(--accent2); padding-bottom:0.2em; margin-bottom:0.6em; display:inline-block;}
+  .reveal h3{ font-size:1.05em; color:var(--accent); margin-top:0.6em;}
+  .reveal p, .reveal li{ font-size: 0.72em; line-height:1.45; }
+  .reveal ul, .reveal ol{ margin-left: 0.4em; }
+  .reveal li{ margin-bottom:0.35em; }
+  .reveal section{ padding: 20px 40px; }
+
+  .kicker{ font-size:0.5em; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom: 0.3em; }
+  .accent{ color: var(--accent); }
+  .accent2{ color:#8a6d00; }
+
+  .badge{
+    display:inline-block; font-size:0.42em; font-weight:700; letter-spacing:0.08em;
+    text-transform:uppercase; background: var(--accent2); color:#3a2c00;
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 14px;
+  }
+
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start; }
+
+  .reveal pre{ box-shadow:none; width:100%; }
+  .reveal pre code{
+    background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px;
+    font-size: 0.62em; line-height:1.5; padding: 14px 16px; max-height:none;
+    font-family: "SF Mono", Menlo, Consolas, monospace; color:#24292e;
+  }
+  .kw{ color:#8250df; font-weight:600; }
+  .str{ color:#0a7d3e; }
+  .cmt{ color:#8a8f98; font-style:italic; }
+  .out{ color:#b35900; }
+
+  .note{
+    font-size:0.55em; color: var(--muted); border-left:3px solid var(--accent2);
+    padding: 8px 14px; background:#fffbea; border-radius:0 6px 6px 0; margin-top:14px;
+  }
+  .joke{
+    font-size:0.6em; color:var(--muted); font-style:italic; margin-top:10px;
+  }
+
+  .footline{
+    position:absolute; bottom:14px; left:40px; font-size:0.32em; color:var(--muted); letter-spacing:0.05em;
+  }
+
+  /* box + label diagram */
+  .diagram{ display:flex; align-items:center; justify-content:center; gap:60px; margin: 30px 0; }
+  .labelset{ display:flex; flex-direction:column; gap:26px; }
+  .label{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.85em; font-weight:700;
+    background:#fff; border:2px solid var(--accent); color:var(--accent);
+    padding:6px 16px; border-radius:6px; position:relative;
+  }
+  .box{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.9em;
+    background:#fff8e1; border:2px solid var(--accent2); border-radius:10px;
+    padding:22px 30px; box-shadow: 3px 3px 0 rgba(0,0,0,0.05);
+  }
+  .arrow-svg{ width:120px; height:120px; }
+
+  /* GC cycle diagram */
+  .gc-wrap{ display:flex; justify-content:center; align-items:center; gap:70px; margin-top:10px; }
+  .gc-node{
+    width:110px; height:70px; border-radius:10px; border:2px solid var(--accent);
+    display:flex; align-items:center; justify-content:center; font-family:monospace;
+    font-weight:700; color:var(--accent); background:#fff;
+  }
+  .gc-node.fade{ animation: fadeOut 2.5s ease-in-out infinite; }
+  @keyframes fadeOut{
+    0%, 40%{ opacity:1; }
+    70%{ opacity:0.15; }
+    100%{ opacity:1; }
+  }
+
+  table.cmp{ border-collapse:collapse; font-size:0.65em; width:100%; margin-top:10px;}
+  table.cmp th, table.cmp td{ border:1px solid var(--code-border); padding:8px 12px; text-align:left; }
+  table.cmp th{ background:var(--code-bg); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<section>
+  <div class="kicker">Python Beyond Coursework</div>
+  <h1>Week 1 — Python Internals<br>&amp; Mental Models</h1>
+</section>
+
+<section>
+  <h2>Your variables have been lying to you</h2>
+  <pre><code>a = [1, 2, 3]
+b = a
+b.append(4)
+
+print(a)</code></pre>
+  <p style="font-size:0.7em; margin-top:0.2em;">Can you predict the output?</p>
+</section>
+
+<section>
+  <div class="kicker">Today's anchor points</div>
+  <h2>Python Internals &amp; Mental Models</h2>
+  <div class="grid2">
+    <ul>
+      <li>References vs. copies</li>
+      <li>Mutability</li>
+      <li>The memory model ("pointers")</li>
+    </ul>
+    <ul>
+      <li><code>is</code> vs <code>==</code></li>
+      <li>Shallow vs. deep copy</li>
+      <li>Garbage collection</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="kicker">Anchor 1</div>
+  <h2>References vs. Copies</h2>
+  <p>Assignment copies the <b>label</b>, not the <b>object</b>.</p>
+  <div class="diagram">
+    <div class="labelset">
+      <div class="label">a</div>
+      <div class="label">b</div>
+    </div>
+    <div class="box">[1, 2, 3, 4]</div>
+  </div>
+</section>
+
+<!-- 5: MUTABILITY -->
+<section>
+  <div class="kicker">Anchor 2</div>
+  <h2>Mutability</h2>
+  <div class="grid2">
+    <div>
+      <h3>Mutable</h3>
+      <p><code>list</code>, <code>dict</code>, <code>set</code>, custom objects</p>
+      <pre><code>x = [1, 2]
+x.append(3)
+<span class="cmt"># same object, new contents</span></code></pre>
+    </div>
+    <div>
+      <h3>Immutable</h3>
+      <p><code>int</code>, <code>str</code>, <code>tuple</code>, <code>frozenset</code></p>
+      <pre><code>s = "hi"
+s += "!"
+<span class="cmt"># new object, s just repoints</span></code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- 6: MEMORY MODEL -->
+<section>
+  <div class="kicker">Anchor 3</div>
+  <h2>The Memory Model — "Pointers"</h2>
+  <p>Every value is an object living somewhere in memory. A variable is just a name pointing at it.</p>
+  <pre><code>a = [1, 2, 3]
+print(id(a))   <span class="cmt"># the object's address, basically</span></code></pre>
+  <p style="font-size:0.6em;">C/Java folks: yes, this is basically a pointer.</p>
+</section>
+
+<!-- 7: IS VS == -->
+<section>
+  <div class="kicker">Anchor 4</div>
+  <h2><code>is</code> vs <code>==</code></h2>
+  <table class="cmp">
+    <tr><th></th><th>compares</th><th>example</th></tr>
+    <tr><td><code>==</code></td><td>value equality</td><td><code>[1,2] == [1,2]</code> → <span class="accent">True</span></td></tr>
+    <tr><td><code>is</code></td><td>identity (same object)</td><td><code>[1,2] is [1,2]</code> → <span class="accent">False</span></td></tr>
+  </table>
+  <br>
+  <p style="margin-top:14px; font-size:0.6em;">small ints and short strings get cached, so <code>"is"</code> can lie to you.</p>
+</section>
+
+<!-- 8: SHALLOW VS DEEP COPY -->
+<section>
+  <div class="kicker">Anchor 5</div>
+  <h2>Shallow vs. Deep Copy</h2>
+  <pre><code><span class="kw">import</span> copy
+
+original = [[1, 2], [3, 4]]
+shallow   = copy.copy(original)
+deep      = copy.deepcopy(original)
+
+shallow[0].append(99)
+<span class="cmt"># original[0] changed too — shallow copy only copies</span>
+<span class="cmt"># the outer list; inner lists are still shared</span></code></pre>
+  <div class="note"><b>Classic trap:</b> <code>list(x)</code> and <code>x[:]</code> are <em>also</em> shallow copies — don't let the syntax fool you. Nested mutable data always needs <code>deepcopy</code>.</div>
+</section>
+
+<!-- 8b: SHALLOW VS DEEP — RULE OF THUMB -->
+<section>
+  <div class="kicker">Anchor 5 — rule of thumb</div>
+  <h2>When to use shallow vs. deep</h2>
+  <table class="cmp">
+    <tr>
+      <th>Data shape</th>
+      <th>Example types</th>
+      <th>Use</th>
+      <th>Why</th>
+    </tr>
+    <tr>
+      <td>Immutable</td>
+      <td><code>int</code>, <code>str</code>, <code>tuple</code></td>
+      <td><span class="accent">either</span></td>
+      <td>Can't mutate — sharing is safe</td>
+    </tr>
+    <tr>
+      <td>Flat mutable</td>
+      <td><code>list</code> of ints / strings</td>
+      <td><span class="accent">shallow</span></td>
+      <td>Elements are immutable — no hidden sharing danger</td>
+    </tr>
+    <tr>
+      <td>Nested mutable</td>
+      <td><code>list</code> of <code>list</code>/<code>dict</code>, objects with state</td>
+      <td><b style="color:#c0392b;">deepcopy</b></td>
+      <td>Inner objects are shared by shallow — mutation bleeds back</td>
+    </tr>
+  </table>
+  <p style="font-size:0.52em; color:var(--muted); margin-top:12px; font-style:italic;">Rule: if the elements can be mutated <em>in-place</em>, shallow copy is not enough.</p>
+</section>
+
+<!-- 9: GARBAGE COLLECTION -->
+<section>
+  <div class="kicker">Anchor 6</div>
+  <h2>Garbage Collection</h2>
+  <p>Reference counting handles most objects instantly. A cycle detector runs periodically to catch the rest.</p>
+  <div class="gc-wrap">
+    <div class="gc-node fade" style="animation-delay:0s;">A</div>
+    <div class="gc-node fade" style="animation-delay:0.15s;">B</div>
+  </div>
+  <p style="text-align:center; font-size:0.55em; color:var(--muted);">A → B → A: each holds the other's refcount at 1. Nothing external points to either. Refcount never hits zero.</p>
+</section>
+
+<!-- 9b: GC — HOW THE CYCLE DETECTOR WORKS -->
+<section>
+  <div class="kicker">Anchor 6 — under the hood</div>
+  <h2>Refcounting vs. Cycle Detector</h2>
+  <table class="cmp">
+    <tr>
+      <th>Mechanism</th>
+      <th>What it asks</th>
+      <th>Blind spot</th>
+    </tr>
+    <tr>
+      <td><b>Refcounting</b></td>
+      <td>"Is anyone pointing at me?"</td>
+      <td>Can't tell live caller from a dead object in the same cycle</td>
+    </tr>
+    <tr>
+      <td><b>Cycle detector</b></td>
+      <td>"If I subtract all internal refs, does count hit zero?"</td>
+      <td>Slower — runs periodically, not instantly</td>
+    </tr>
+  </table>
+  <div class="note" style="margin-top:14px;">Cycle detector simulates stripping out intra-group references — if the adjusted count reaches zero, the whole group is unreachable and gets swept at once.</div>
+</section>
+
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    center: false,
+    transition: 'slide',
+    width: 1100,
+    height: 700,
+    margin: 0.06
+  });
+</script>
+</body>
+</html>
