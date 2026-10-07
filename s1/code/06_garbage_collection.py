@@ -20,6 +20,5 @@ b = Node("B")
 a.other = b
 b.other = a  # cycle: A -> B -> A
 
-# TODO: add an iteraction like, hit enter to collect them and showcase how they are still there
 del a, b  # refcount never hits 0 here, nothing prints yet
 gc.collect()  # cycle detector sweeps them now -- watch the output appear
