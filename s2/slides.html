@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 2 — Iterators, Generators &amp; Lazy Evaluation</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css" id="theme">
+
+<style>
+  :root{
+    --accent:#2b6cb0;
+    --accent2:#e0a800;
+    --ink:#1a1a1a;
+    --muted:#6b7280;
+    --code-bg:#f6f7f9;
+    --code-border:#e2e5ea;
+    --bad:#c0392b;
+    --good:#1e8449;
+  }
+  .reveal{ font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); }
+  .reveal .slides{ text-align:left; }
+  .reveal h1, .reveal h2, .reveal h3{
+    font-family: inherit; text-transform:none; letter-spacing:0;
+    color: var(--ink); font-weight:700;
+  }
+  .reveal h1{ font-size: 2.1em; }
+  .reveal h2{ font-size: 1.5em; border-bottom: 3px solid var(--accent2); padding-bottom:0.2em; margin-bottom:0.6em; display:inline-block;}
+  .reveal h3{ font-size:1.05em; color:var(--accent); margin-top:0.6em;}
+  .reveal p, .reveal li{ font-size: 0.72em; line-height:1.45; }
+  .reveal ul, .reveal ol{ margin-left: 0.4em; }
+  .reveal li{ margin-bottom:0.35em; }
+  .reveal section{ padding: 20px 40px; }
+
+  .kicker{ font-size:0.5em; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom: 0.3em; }
+  .accent{ color: var(--accent); }
+
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start; }
+
+  .reveal pre{ box-shadow:none; width:100%; }
+  .reveal pre code{
+    background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px;
+    font-size: 0.62em; line-height:1.5; padding: 14px 16px; max-height:none;
+    font-family: "SF Mono", Menlo, Consolas, monospace; color:#24292e;
+  }
+  .kw{ color:#8250df; font-weight:600; }
+  .cmt{ color:#8a8f98; font-style:italic; }
+
+  .note{
+    font-size:0.55em; color: var(--muted); border-left:3px solid var(--accent2);
+    padding: 8px 14px; background:#fffbea; border-radius:0 6px 6px 0; margin-top:14px;
+  }
+
+  /* label -> box diagram (same visual language as week 1) */
+  .diagram{ display:flex; align-items:center; justify-content:center; gap:50px; margin: 24px 0; }
+  .label{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.85em; font-weight:700;
+    background:#fff; border:2px solid var(--accent); color:var(--accent);
+    padding:6px 16px; border-radius:6px;
+  }
+  .box{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.8em;
+    background:#fff8e1; border:2px solid var(--accent2); border-radius:10px;
+    padding:18px 26px; box-shadow: 3px 3px 0 rgba(0,0,0,0.05);
+  }
+  .box.recipe{ background:#eef5ff; border:2px dashed var(--accent); }
+  .arrow{ font-size:1.2em; color:var(--muted); }
+
+  /* pipeline / flow diagrams */
+  .flow{ display:flex; align-items:center; justify-content:center; gap:14px; margin:26px 0 10px; flex-wrap:nowrap; }
+  .stage{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.62em; font-weight:700;
+    background:#fff; border:2px solid var(--accent); color:var(--accent);
+    padding:12px 16px; border-radius:8px; text-align:center; white-space:nowrap;
+  }
+  .stage.end{ background:#fff8e1; border-color:var(--accent2); color:#6b4f00; }
+  .flow .arrow{ font-size:0.9em; }
+  .flow-caption{ text-align:center; font-size:0.55em; color:var(--muted); }
+
+  /* stat cards */
+  .cards{ display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:16px; }
+  .card{ border:2px solid var(--code-border); border-radius:12px; padding:18px 24px; background:#fff; }
+  .card h3{ margin:0 0 6px 0; font-size:0.85em; }
+  .card .big{ font-size:1.05em; font-weight:800; line-height:1.15; }
+  .card .sub{ font-size:0.55em; color:var(--muted); margin-top:4px; }
+  .card.bad{ border-color:#f0c4be; background:#fff8f7; }
+  .card.bad .big{ color:var(--bad); }
+  .card.good{ border-color:#bfe3cc; background:#f6fcf8; }
+  .card.good .big{ color:var(--good); }
+
+  table.cmp{ border-collapse:collapse; font-size:0.65em; width:100%; margin-top:10px;}
+  table.cmp th, table.cmp td{ border:1px solid var(--code-border); padding:8px 12px; text-align:left; }
+  table.cmp th{ background:var(--code-bg); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1: TITLE -->
+<section>
+  <div class="kicker">Python Beyond Coursework</div>
+  <h1>Week 2 — Iterators, Generators<br>&amp; Lazy Evaluation</h1>
+</section>
+
+<!-- 2: COLD OPEN -->
+<section>
+  <h2>Your loops have been lying to you</h2>
+  <pre><code>nums = (n * n for n in range(5))
+
+print(list(nums))
+print(list(nums))</code></pre>
+  <p style="font-size:0.7em; margin-top:0.2em;">Can you predict the output?</p>
+</section>
+
+<!-- 3: AGENDA -->
+<section>
+  <div class="kicker">Today's anchor points</div>
+  <h2>Iterators, Generators &amp; Lazy Evaluation</h2>
+  <div class="grid2">
+    <ul>
+      <li>Iterables vs. iterators</li>
+      <li>Generator functions and <code>yield</code></li>
+      <li>Lazy pipelines</li>
+    </ul>
+    <ul>
+      <li>Infinite sequences</li>
+      <li><code>itertools</code> (quick tour)</li>
+      <li><b>The billion-row problem</b></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 4: ITERABLE VS ITERATOR -->
+<section>
+  <div class="kicker">Anchor 1</div>
+  <h2>Iterables vs. Iterators</h2>
+  <div class="flow">
+    <div class="stage">iterable<br><span style="font-weight:400">[1, 2, 3]</span></div>
+    <div class="arrow">iter() &rarr;</div>
+    <div class="stage">iterator</div>
+    <div class="arrow">next() &rarr;</div>
+    <div class="stage end">1, 2, 3, then<br>StopIteration</div>
+  </div>
+  <div class="flow-caption">that is all a <code>for</code> loop does</div>
+  <table class="cmp" style="margin-top:22px;">
+    <tr><th></th><th>can restart?</th><th>examples</th></tr>
+    <tr><td><b>Iterable</b></td><td>yes &mdash; hands out a fresh iterator each time</td><td><code>list</code>, <code>str</code>, <code>dict</code>, <code>range</code>, file</td></tr>
+    <tr><td><b>Iterator</b></td><td>no &mdash; one-shot, remembers its position</td><td><code>iter(x)</code>, generators, <code>map</code>, <code>zip</code></td></tr>
+  </table>
+</section>
+
+<!-- 5: GENERATOR FUNCTIONS -->
+<section>
+  <div class="kicker">Anchor 2</div>
+  <h2>Generator Functions &amp; <code>yield</code></h2>
+  <div class="grid2">
+    <pre><code><span class="kw">def</span> count_up_to(n):
+    i = 1
+    <span class="kw">while</span> i &lt;= n:
+        <span class="kw">yield</span> i      <span class="cmt"># pause here</span>
+        i += 1       <span class="cmt"># resume here</span>
+
+gen = count_up_to(3)   <span class="cmt"># runs nothing!</span>
+next(gen)              <span class="cmt"># 1</span>
+next(gen)              <span class="cmt"># 2</span></code></pre>
+    <ul style="margin-top:6px;">
+      <li>Calling it only <b>builds</b> the generator</li>
+      <li><code>next()</code> runs until the next <code>yield</code></li>
+      <li>Local variables survive the pause</li>
+      <li>Falling off the end raises <code>StopIteration</code></li>
+    </ul>
+  </div>
+</section>
+
+<!-- 6: BOXES AND LABELS CALLBACK -->
+<section>
+  <h2>A generator is a recipe, not the dish</h2>
+  <div class="diagram">
+    <div class="label">nums</div><div class="arrow">&rarr;</div>
+    <div class="box">[0, 1, 4, 9, 16]</div>
+    <div style="width:30px"></div>
+    <div class="label">squares</div><div class="arrow">&rarr;</div>
+    <div class="box recipe">generator<br><span style="font-size:0.8em">"next: n=0, square it"</span></div>
+  </div>
+  <p style="text-align:center; font-size:0.62em; color:var(--muted);">
+    list: every value already exists in memory &nbsp;|&nbsp; generator: values appear one at a time, then they are gone
+  </p>
+</section>
+
+<!-- 7: LAZY PIPELINES -->
+<section>
+  <div class="kicker">Anchor 3</div>
+  <h2>Lazy Pipelines</h2>
+  <div class="flow">
+    <div class="stage">read_lines</div><div class="arrow">&rarr;</div>
+    <div class="stage">parse</div><div class="arrow">&rarr;</div>
+    <div class="stage">filter</div><div class="arrow">&rarr;</div>
+    <div class="stage end">aggregate</div>
+  </div>
+  <div class="flow-caption">one item travels through every stage before the next one is even read</div>
+  <pre style="margin-top:22px;"><code>result = aggregate(filter_hot(parse(read_lines(<span style="color:#0a7d3e">"big.log"</span>))))</code></pre>
+  <div class="note">Each stage is a small generator. Memory use stays flat no matter how big the input is.</div>
+</section>
+
+<!-- 8: MEMORY -->
+<section>
+  <div class="kicker">Why laziness matters</div>
+  <h2>Brackets vs. parentheses</h2>
+  <pre><code>sum([n * n <span class="kw">for</span> n <span class="kw">in</span> range(3_000_000)])   <span class="cmt"># list comprehension</span>
+sum( n * n <span class="kw">for</span> n <span class="kw">in</span> range(3_000_000) )    <span class="cmt"># generator expression</span></code></pre>
+  <div class="cards">
+    <div class="card bad"><h3>List comprehension</h3><div class="big">~115 MB</div><div class="sub">peak memory</div></div>
+    <div class="card good"><h3>Generator expression</h3><div class="big">~0 MB</div><div class="sub">same answer, same code &mdash; two characters different</div></div>
+  </div>
+</section>
+
+<!-- 9: INFINITE SEQUENCES -->
+<section>
+  <div class="kicker">Anchor 4</div>
+  <h2>Infinite Sequences</h2>
+  <pre><code><span class="kw">from</span> itertools <span class="kw">import</span> islice
+
+<span class="kw">def</span> fibonacci():
+    a, b = 0, 1
+    <span class="kw">while</span> True:          <span class="cmt"># never ends -- and that's fine</span>
+        <span class="kw">yield</span> a
+        a, b = b, a + b
+
+list(islice(fibonacci(), 10))   <span class="cmt"># you decide how much to take</span></code></pre>
+  <div class="note">Real uses: sensor feeds, log tails, event streams. <code>list(fibonacci())</code> would run until memory dies.</div>
+</section>
+
+<!-- 10: ITERTOOLS -->
+<section>
+  <div class="kicker">Anchor 5 &mdash; quick tour</div>
+  <h2><code>itertools</code>: lazy building blocks</h2>
+  <table class="cmp">
+    <tr><th>Tool</th><th>Does</th></tr>
+    <tr><td><code>islice</code></td><td>slice <i>any</i> iterator</td></tr>
+    <tr><td><code>chain</code></td><td>glue iterables end to end</td></tr>
+    <tr><td><code>count</code> / <code>cycle</code></td><td>infinite counters and repeaters</td></tr>
+    <tr><td><code>takewhile</code></td><td>take until a condition fails</td></tr>
+    <tr><td><code>groupby</code></td><td>group <i>adjacent</i> items (sort first)</td></tr>
+    <tr><td><code>accumulate</code>, <code>pairwise</code>, <code>product</code></td><td>running totals, neighbors, nested loops</td></tr>
+  </table>
+</section>
+
+<!-- 11: GOTCHAS -->
+<section>
+  <div class="kicker">Before you go write generators everywhere</div>
+  <h2>Four ways they bite</h2>
+  <ul>
+    <li><b>One-shot:</b> once consumed, it is empty</li>
+    <li><b>No indexing:</b> <code>gen[0]</code> is a <code>TypeError</code>; use <code>next()</code> or <code>islice</code></li>
+    <li><b>Closed resources:</b> a <code>with</code> block can close the file before you read from it</li>
+    <li><b>Late binding:</b> variables are looked up when consumed, not when created</li>
+  </ul>
+</section>
+
+<!-- 12: INDUSTRY -->
+<section>
+  <div class="kicker">Industry relevance</div>
+  <h2>Where this shows up</h2>
+  <ul>
+    <li>Data pipelines (ETL, log processing)</li>
+    <li>Streaming systems (never-ending input)</li>
+    <li>Memory-efficient processing of big files</li>
+    <li>Under the hood of <code>async</code>, <code>pytest</code> fixtures, and web frameworks</li>
+  </ul>
+</section>
+
+<!-- 13: BILLION ROW PROBLEM -->
+<section>
+  <div class="kicker">The billion-row problem</div>
+  <h2>One file. One billion lines.</h2>
+  <pre><code>Hamburg;12.0
+Cairo;31.4
+Hamburg;8.9
+Oslo;-3.2
+...</code></pre>
+  <p>For every station, print <b>min / mean / max</b> temperature.</p>
+  <div class="cards" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="card"><h3>Rows</h3><div class="big" style="font-size:0.8em">1,000,000,000</div></div>
+    <div class="card"><h3>File size</h3><div class="big" style="font-size:0.8em">~13 GB</div></div>
+    <div class="card"><h3>Stations</h3><div class="big" style="font-size:0.8em">~hundreds</div></div>
+  </div>
+  <div class="note">Original challenge: Gunnar Morling's "1BRC" (2024), in Java. Our version starts at 1M rows and scales up.</div>
+</section>
+
+<!-- 14: ATTEMPT 1 VS 2 -->
+<section>
+  <div class="kicker">Live run: 5 million rows</div>
+  <h2>Attempt 1 vs. attempt 2</h2>
+  <div class="cards">
+    <div class="card bad"><h3>naive.py &mdash; load everything</h3><div class="big">2.3 GB &middot; 14 s</div><div class="sub">memory grows with the file. At 1B rows: ~460 GB (extrapolated)</div></div>
+    <div class="card good"><h3>lazy.py &mdash; generator pipeline</h3><div class="big">9 MB &middot; 1.4 s</div><div class="sub">memory is flat. File size no longer matters</div></div>
+  </div>
+</section>
+
+<!-- 15: DISCUSSION -->
+<section>
+  <div class="kicker">Discussion</div>
+  <h2>How would <i>you</i> make it faster?</h2>
+  <ul>
+    <li>Where is the time actually going?</li>
+    <li>Could more than one CPU core help?</li>
+    <li>Do we really need <code>float</code>? Do we need text at all?</li>
+    <li>What if the data did not fit on one disk?</li>
+  </ul>
+</section>
+
+<!-- 16: TEASER -->
+<section>
+  <div class="kicker">Next week</div>
+  <h2>Decorators &amp; Functional Python</h2>
+  <p>A function that takes a function.</p> 
+  <p><em>First job:</em> time our pipeline without touching its code.</p>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    center: false,
+    transition: 'slide',
+    width: 1100,
+    height: 700,
+    margin: 0.06
+  });
+</script>
+</body>
+</html>

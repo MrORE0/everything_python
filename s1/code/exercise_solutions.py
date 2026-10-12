@@ -3,6 +3,7 @@ Week 1 exercise -- fixed versions of exercise_broken_snippets.py.
 Reveal after pairs have predicted + run the broken versions.
 """
 
+
 # --- A: fixed mutable default argument ---
 def add_item_fixed(item, basket=None):
     if basket is None:
