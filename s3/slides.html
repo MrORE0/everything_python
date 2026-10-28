@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 3 — Decorators, Functional Python &amp; Git</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css" id="theme">
+
+<style>
+  :root{
+    --accent:#2b6cb0;
+    --accent2:#e0a800;
+    --ink:#1a1a1a;
+    --muted:#6b7280;
+    --code-bg:#f6f7f9;
+    --code-border:#e2e5ea;
+    --bad:#c0392b;
+    --good:#1e8449;
+  }
+  .reveal{ font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); }
+  .reveal .slides{ text-align:left; }
+  .reveal h1, .reveal h2, .reveal h3{
+    font-family: inherit; text-transform:none; letter-spacing:0;
+    color: var(--ink); font-weight:700;
+  }
+  .reveal h1{ font-size: 2.1em; }
+  .reveal h2{ font-size: 1.5em; border-bottom: 3px solid var(--accent2); padding-bottom:0.2em; margin-bottom:0.6em; display:inline-block;}
+  .reveal h3{ font-size:1.05em; color:var(--accent); margin-top:0.6em;}
+  .reveal p, .reveal li{ font-size: 0.72em; line-height:1.45; }
+  .reveal ul, .reveal ol{ margin-left: 0.4em; }
+  .reveal li{ margin-bottom:0.35em; }
+  .reveal section{ padding: 20px 40px; }
+
+  .kicker{ font-size:0.5em; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom: 0.3em; }
+  .kicker.git{ color:#b45309; }
+  .accent{ color: var(--accent); }
+
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start; }
+
+  .reveal pre{ box-shadow:none; width:100%; }
+  .reveal pre code{
+    background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px;
+    font-size: 0.62em; line-height:1.5; padding: 14px 16px; max-height:none;
+    font-family: "SF Mono", Menlo, Consolas, monospace; color:#24292e;
+  }
+  .kw{ color:#8250df; font-weight:600; }
+  .cmt{ color:#8a8f98; font-style:italic; }
+  .str{ color:#0a7d3e; }
+  .del{ color:#c0392b; }
+  .add{ color:#1e8449; }
+
+  .note{
+    font-size:0.55em; color: var(--muted); border-left:3px solid var(--accent2);
+    padding: 8px 14px; background:#fffbea; border-radius:0 6px 6px 0; margin-top:14px;
+  }
+
+  /* label -> box diagram (same visual language as weeks 1 and 2) */
+  .diagram{ display:flex; align-items:center; justify-content:center; gap:30px; margin: 24px 0; }
+  .label{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.85em; font-weight:700;
+    background:#fff; border:2px solid var(--accent); color:var(--accent);
+    padding:6px 16px; border-radius:6px;
+  }
+  .box{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.8em;
+    background:#fff8e1; border:2px solid var(--accent2); border-radius:10px;
+    padding:18px 26px; box-shadow: 3px 3px 0 rgba(0,0,0,0.05); text-align:center;
+  }
+  .box.recipe{ background:#eef5ff; border:2px dashed var(--accent); }
+  .arrow{ font-size:1.2em; color:var(--muted); }
+
+  /* flow diagrams */
+  .flow{ display:flex; align-items:center; justify-content:center; gap:14px; margin:26px 0 10px; flex-wrap:nowrap; }
+  .stage{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:0.62em; font-weight:700;
+    background:#fff; border:2px solid var(--accent); color:var(--accent);
+    padding:12px 16px; border-radius:8px; text-align:center; white-space:nowrap;
+  }
+  .stage.end{ background:#fff8e1; border-color:var(--accent2); color:#6b4f00; }
+  .flow .arrow{ font-size:0.75em; text-align:center; }
+  .flow-caption{ text-align:center; font-size:0.55em; color:var(--muted); }
+
+  /* cards */
+  .cards{ display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:16px; }
+  .card{ border:2px solid var(--code-border); border-radius:12px; padding:16px 22px; background:#fff; }
+  .card h3{ margin:0 0 6px 0; font-size:0.8em; }
+  .card .big{ font-size:0.8em; font-weight:700; line-height:1.3; font-family:"SF Mono", Menlo, Consolas, monospace; }
+  .card .sub{ font-size:0.55em; color:var(--muted); margin-top:4px; }
+  .card.bad{ border-color:#f0c4be; background:#fff8f7; }
+  .card.bad .big{ color:var(--bad); }
+  .card.good{ border-color:#bfe3cc; background:#f6fcf8; }
+  .card.good .big{ color:var(--good); }
+
+  table.cmp{ border-collapse:collapse; font-size:0.62em; width:100%; margin-top:10px;}
+  table.cmp th, table.cmp td{ border:1px solid var(--code-border); padding:7px 12px; text-align:left; }
+  table.cmp th{ background:var(--code-bg); }
+  table.cmp.wide{ font-size:0.72em; }
+  table.cmp.wide td, table.cmp.wide th{ padding:12px 18px; }
+  table.cmp.wide code{ white-space:nowrap; font-size:1em; }
+
+
+  /* denser layout for text-heavy slides: smaller list text, room at bottom and right */
+  .reveal section.tight{ padding-bottom:50px; }
+  .reveal section.tight .grid2{ grid-template-columns: 1.05fr 1fr; gap:36px; padding-right:40px; }
+  .reveal section.tight li{ font-size:0.58em; line-height:1.4; margin-bottom:0.5em; }
+  .reveal section.tight .note{ font-size:0.5em; margin-top:18px; margin-right:90px; }
+
+  .part{ display:inline-block; font-size:0.42em; font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+         background:var(--accent); color:#fff; padding:5px 12px; border-radius:999px; margin-bottom:12px; }
+  .part.git{ background:#b45309; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1: TITLE -->
+<section>
+  <div class="kicker">Python Beyond Coursework</div>
+  <h1>Week 3 — Decorators,<br>Functional Python &amp; Git</h1>
+</section>
+
+<!-- 3: AGENDA -->
+<section>
+  <div class="kicker">Today</div>
+  <h2>Two halves</h2>
+  <div class="grid2">
+    <div>
+      <div class="part">Part 1</div>
+      <ul>
+        <li>Functions are objects</li>
+        <li>Closures</li>
+        <li>Decorators</li>
+        <li><code>partial</code>, map / filter / reduce</li>
+      </ul>
+    </div>
+    <div>
+      <div class="part git">Part 2</div>
+      <ul>
+        <li>Why git</li>
+        <li>Commits, branches, merges</li>
+        <li>Remotes and GitHub</li>
+        <li>Habits that save you</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PART 1: DECORATORS ============ -->
+
+<!-- 4: FUNCTIONS ARE OBJECTS -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 1</div>
+  <h2>Functions are objects</h2>
+  <div class="diagram" style="margin:10px 0;">
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <div class="label">shout</div>
+      <div class="label">loud</div>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="box recipe">function<br>shout(text)</div>
+  </div>
+  <p>A function name is just a label, so you can pass functions around like any other value.</p>
+  <pre><code>words = [<span class="str">"banana"</span>, <span class="str">"Apple"</span>, <span class="str">"kiwi"</span>]
+
+sorted(words, key=len)          <span class="cmt"># ['kiwi', 'Apple', 'banana']</span>
+<span class="cmt"># we pass len itself (no parentheses); sorted calls it on every word</span>
+
+ops = {<span class="str">"upper"</span>: str.upper, <span class="str">"title"</span>: str.title}
+ops[<span class="str">"upper"</span>](<span class="str">"hello"</span>)         <span class="cmt"># 'HELLO'  look a function up by name, then call it</span>
+ops[<span class="str">"title"</span>](<span class="str">"hello"</span>)         <span class="cmt"># 'Hello'</span></code></pre>
+</section>
+
+<!-- 4b: DISPATCH TABLE -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 1 &mdash; a realistic use</div>
+  <h2>A dictionary of functions</h2>
+  <p>A chat bot gets the command as text. The dictionary picks the function.</p>
+  <pre><code><span class="kw">def</span> greet(name):
+    <span class="kw">return</span> f<span class="str">"Hello, {name}!"</span>
+
+<span class="kw">def</span> goodbye(name):
+    <span class="kw">return</span> f<span class="str">"Bye, {name}."</span>
+
+commands = {<span class="str">"hi"</span>: greet, <span class="str">"bye"</span>: goodbye}
+
+message = <span class="str">"hi"</span>                  <span class="cmt"># imagine this came from a user</span>
+commands[message](<span class="str">"Steve"</span>)      <span class="cmt"># 'Hello, Steve!'</span></code></pre>
+  <div class="note">New command = one new line in the dictionary. No <code>if</code>/<code>elif</code> chain to grow.</div>
+</section>
+
+<!-- 5: CLOSURES -->
+<section class="tight">
+  <div class="kicker">Part 1 &middot; Anchor 2</div>
+  <h2>Closures</h2>
+  <div class="grid2">
+    <pre><code><span class="kw">def</span> make_counter():
+    count = 0
+    <span class="kw">def</span> increment():
+        <span class="kw">nonlocal</span> count
+        count += 1
+        <span class="kw">return</span> count
+    <span class="kw">return</span> increment
+
+c = make_counter()
+c(); c(); c()
+c.__closure__[0].cell_contents</code></pre>
+    <ul style="margin-top:0;">
+      <li>An inner function <b>remembers</b> the variables around it</li>
+      <li>Each call to <code>make_counter</code> gets its own memory</li>
+      <li>It stores them in a special attribute called <code>__closure__</code></li>
+      <li>The inner function keeps a <b>reference, not a copy</b>, to those variables</li>
+    </ul>
+  </div>
+  <div class="note">Closures are used in functional programming, event handling and callback functions, wherever you need to retain some state without using global variables.</div>
+</section>
+
+<!-- 5b: WHY CLOSURES COME FIRST -->
+<section>
+  <div class="kicker">Part 1 &middot; The connection</div>
+  <h2>A decorator is a closure that remembers a function</h2>
+  <div class="grid2">
+    <div>
+      <h3>Closure</h3>
+      <pre><code><span class="kw">def</span> make_multiplier(m):
+    <span class="kw">def</span> inner(x):
+        <span class="kw">return</span> x * m
+    <span class="kw">return</span> inner</code></pre>
+      <p>remembers a <b>number</b>: <code>m</code></p>
+    </div>
+    <div>
+      <h3>Decorator</h3>
+      <pre><code><span class="kw">def</span> timed(func):
+    <span class="kw">def</span> wrapper(*args, **kwargs):
+        <span class="kw">return</span> func(*args, **kwargs)
+    <span class="kw">return</span> wrapper</code></pre>
+      <p>remembers a <b>function</b>: <code>func</code></p>
+    </div>
+  </div>
+  <div class="note">Same shape: the outer function returns an inner function that uses the outer function's variable. <code>timed</code> has already finished by the time <code>wrapper</code> runs, and <code>wrapper</code> still finds <code>func</code> because it is a closure.</div>
+</section>
+
+<!-- 6: DECORATOR = CLOSURE + @ -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 3</div>
+  <h2>A decorator takes a function, returns a function</h2>
+  <div class="grid2">
+    <pre><code><span class="kw">def</span> timed(func):
+    <span class="kw">def</span> wrapper(*args, **kwargs):
+        start = perf_counter()
+        result = func(*args, **kwargs)
+        print(perf_counter() - start)
+        <span class="kw">return</span> result
+    <span class="kw">return</span> wrapper
+
+<span class="kw">@timed</span>
+<span class="kw">def</span> slow_add(a, b): ...</code></pre>
+    <div>
+      <p><code>@timed</code> is shorthand for:</p>
+      <pre><code>slow_add = timed(slow_add)</code></pre>
+      <div class="diagram" style="margin:10px 0; gap:14px;">
+        <div class="label">slow_add</div><div class="arrow">&rarr;</div>
+        <div class="box recipe" style="padding:10px 14px; font-size:0.65em">wrapper<br><span style="font-size:0.85em">&rarr; original</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7: DECORATORS IN PRACTICE -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 3 &mdash; in practice</div>
+  <h2>The three you will actually write</h2>
+  <table class="cmp">
+    <tr><th>Decorator</th><th>Does</th><th>Gotcha</th></tr>
+    <tr><td><code>@timed</code></td><td>measures how long a call takes</td><td>on a generator it times only the <i>creation</i></td></tr>
+    <tr><td><code>@retry(times=3)</code></td><td>tries again when a call fails</td><td>takes arguments: three nested functions</td></tr>
+    <tr><td><code>@cache</code></td><td>remembers results per arguments</td><td>arguments must be hashable</td></tr>
+  </table>
+  <div class="note">Always add <code>@wraps(func)</code> inside your wrapper, or the decorated function loses its name and docstring. Frameworks (Flask, pytest, FastAPI) are built on exactly this pattern.</div>
+</section>
+
+<!-- 8: CACHE + DP -->
+<section>
+  <div class="kicker">Part 1 &middot; Demo</div>
+  <h2>One line turns exponential into instant</h2>
+  <pre><code><span class="kw">from</span> functools <span class="kw">import</span> cache
+
+<span class="kw">@cache</span>
+<span class="kw">def</span> paths(r, c):            <span class="cmt"># ways to cross an r x c grid</span>
+    <span class="kw">if</span> r == 0 <span class="kw">or</span> c == 0:
+        <span class="kw">return</span> 1
+    <span class="kw">return</span> paths(r - 1, c) + paths(r, c - 1)</code></pre>
+  <div class="cards">
+    <div class="card bad"><h3>12 x 12, no cache</h3><div class="big">~0.4 s</div><div class="sub">millions of repeated calls</div></div>
+    <div class="card good"><h3>12 x 12, with @cache</h3><div class="big">~0.000 s</div><div class="sub">each subproblem solved once &mdash; that is dynamic programming</div></div>
+  </div>
+</section>
+
+<!-- 9: PARTIAL -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 4</div>
+  <h2><code>partial</code>: pre-fill arguments</h2>
+  <pre><code><span class="kw">from</span> functools <span class="kw">import</span> partial
+
+<span class="kw">def</span> mult(m, num):
+    <span class="kw">return</span> m * num
+
+double = partial(mult, 2)      <span class="cmt"># m is now fixed to 2</span>
+double(5)                      <span class="cmt"># 10</span>
+
+binary_to_int = partial(int, base=2)
+binary_to_int(<span style="color:#0a7d3e">"1010"</span>)         <span class="cmt"># 10</span></code></pre>
+  <div class="note"><code>partial</code> builds a new function from an old one with some arguments already filled in.</div>
+</section>
+
+<!-- 9b: MAP / FILTER / REDUCE -->
+<section>
+  <div class="kicker">Part 1 &middot; Anchor 4</div>
+  <h2>map, filter, reduce</h2>
+  <table class="cmp wide">
+    <tr><th>Tool</th><th>What it does</th><th>In Python, usually write</th></tr>
+    <tr><td><code>map(f, xs)</code></td><td>apply <code>f</code> to every item</td><td><code>[f(x) for x in xs]</code></td></tr>
+    <tr><td><code>filter(f, xs)</code></td><td>keep items where <code>f</code> is true</td><td><code>[x for x in xs if f(x)]</code></td></tr>
+    <tr><td><code>reduce(add, xs)</code></td><td>fold the items into one value</td><td><code>sum(xs)</code></td></tr>
+  </table>
+  <div class="note">Comprehensions are the idiomatic choice. Know <code>map</code>, <code>filter</code> and <code>reduce</code> for reading other people's code.</div>
+</section>
+
+<!-- 10: BILLION ROW CALLBACK -->
+<section>
+  <div class="kicker">Part 1 &middot; Callback to week 2</div>
+  <h2>Timing the billion-row pipeline</h2>
+  <pre><code><span class="kw">@timed</span>
+<span class="kw">def</span> main():
+    stats = aggregate(parse(read_lines(DATA_FILE)))   <span class="cmt"># consumes the whole pipeline</span>
+    <span class="kw">return</span> stats</code></pre>
+  <p>Decorate the function that <b>consumes</b> the generators, not the generators themselves.</p>
+  <div class="note">No more copy-pasting stopwatch code into every script. In week 7 we will profile the pipeline properly to find where the time really goes.</div>
+</section>
+
+<!-- ============ PART 2: GIT ============ -->
+
+<!-- 11: WHY GIT -->
+<section>
+  <div class="kicker git">Part 2 &middot; Why git</div>
+  <h2>final_v2_REAL_final_USE_THIS.py</h2>
+  <ul>
+    <li><b>History:</b> every version of your project, forever</li>
+    <li><b>Undo:</b> go back to the last time it worked</li>
+    <li><b>Collaboration:</b> many people, one codebase, no overwriting</li>
+    <li><b>Everything later depends on it:</b> GitHub, CI, packaging, code review</li>
+  </ul>
+</section>
+
+<!-- 12: MENTAL MODEL: COMMIT GRAPH -->
+<section>
+  <div class="kicker git">Part 2 &middot; Mental model</div>
+  <h2>Commits are snapshots. Branches are labels.</h2>
+  <svg viewBox="0 0 900 250" width="100%" style="margin-top:6px" xmlns="http://www.w3.org/2000/svg" font-family="SF Mono, Menlo, Consolas, monospace">
+    <!-- edges -->
+    <line x1="140" y1="150" x2="270" y2="150" stroke="#9aa3af" stroke-width="3"/>
+    <line x1="310" y1="150" x2="440" y2="150" stroke="#9aa3af" stroke-width="3"/>
+    <line x1="480" y1="150" x2="610" y2="150" stroke="#9aa3af" stroke-width="3"/>
+    <line x1="290" y1="150" x2="440" y2="60"  stroke="#9aa3af" stroke-width="3"/>
+    <!-- commits -->
+    <circle cx="120" cy="150" r="22" fill="#fff8e1" stroke="#e0a800" stroke-width="3"/><text x="120" y="155" text-anchor="middle" font-size="14" font-weight="700">C1</text>
+    <circle cx="290" cy="150" r="22" fill="#fff8e1" stroke="#e0a800" stroke-width="3"/><text x="290" y="155" text-anchor="middle" font-size="14" font-weight="700">C2</text>
+    <circle cx="460" cy="150" r="22" fill="#fff8e1" stroke="#e0a800" stroke-width="3"/><text x="460" y="155" text-anchor="middle" font-size="14" font-weight="700">C3</text>
+    <circle cx="460" cy="60"  r="22" fill="#fff8e1" stroke="#e0a800" stroke-width="3"/><text x="460" y="65"  text-anchor="middle" font-size="14" font-weight="700">C4</text>
+    <circle cx="630" cy="150" r="22" fill="#fff8e1" stroke="#e0a800" stroke-width="3"/><text x="630" y="155" text-anchor="middle" font-size="14" font-weight="700">C5</text>
+    <!-- labels (week-1 style) -->
+    <rect x="590" y="195" width="80" height="32" rx="6" fill="#fff" stroke="#2b6cb0" stroke-width="2"/><text x="630" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#2b6cb0">main</text>
+    <line x1="630" y1="195" x2="630" y2="176" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="530" y="12" width="120" height="32" rx="6" fill="#fff" stroke="#2b6cb0" stroke-width="2"/><text x="590" y="33" text-anchor="middle" font-size="15" font-weight="700" fill="#2b6cb0">feature</text>
+    <line x1="530" y1="32" x2="484" y2="52" stroke="#2b6cb0" stroke-width="2"/>
+    <rect x="690" y="195" width="80" height="32" rx="6" fill="#fff" stroke="#6b7280" stroke-width="2" stroke-dasharray="5 4"/><text x="730" y="216" text-anchor="middle" font-size="15" font-weight="700" fill="#6b7280">HEAD</text>
+    <line x1="690" y1="205" x2="670" y2="205" stroke="#6b7280" stroke-width="2"/>
+  </svg>
+  <p style="font-size:0.6em; color:var(--muted);">A branch is just a label pointing at a commit. <code>HEAD</code> is "you are here". Creating a branch is nearly free.</p>
+</section>
+
+<!-- 13: THREE AREAS -->
+<section>
+  <div class="kicker git">Part 2 &middot; Mental model</div>
+  <h2>Three places your changes live</h2>
+  <div class="flow">
+    <div class="stage">working<br>directory</div>
+    <div class="arrow">git add<br>&rarr;</div>
+    <div class="stage">staging<br>area</div>
+    <div class="arrow">git commit<br>&rarr;</div>
+    <div class="stage end">repository<br>(history)</div>
+  </div>
+  <div class="flow-caption">edit freely &nbsp;|&nbsp; choose what goes in the next snapshot &nbsp;|&nbsp; permanent record</div>
+  <div class="note">Staging lets you commit <i>part</i> of your work as one clean, single-purpose commit.</div>
+</section>
+
+<!-- 14: EVERYDAY COMMANDS -->
+<section>
+  <div class="kicker git">Part 2 &middot; Everyday commands</div>
+  <h2>The loop you will run 100 times</h2>
+  <table class="cmp">
+    <tr><th>Command</th><th>Meaning</th></tr>
+    <tr><td><code>git status</code></td><td>what changed? what is staged?</td></tr>
+    <tr><td><code>git add file.py</code></td><td>stage it for the next commit</td></tr>
+    <tr><td><code>git commit -m "Add retry decorator"</code></td><td>save the snapshot</td></tr>
+    <tr><td><code>git diff</code></td><td>show unstaged changes</td></tr>
+    <tr><td><code>git log --oneline --graph --all</code></td><td>history at a glance</td></tr>
+    <tr><td><code>git restore file.py</code></td><td>throw away uncommitted edits</td></tr>
+  </table>
+</section>
+
+<!-- 15: BRANCH + MERGE + CONFLICT -->
+<section>
+  <div class="kicker git">Part 2 &middot; Branching</div>
+  <h2>Branch, merge, conflict</h2>
+  <div class="grid2">
+    <pre><code>git switch -c feature
+<span class="cmt"># ...edit, commit...</span>
+git switch main
+git merge feature</code></pre>
+    <pre><code>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+print("Hello, world")
+=======
+print("Hello from feature")
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature</code></pre>
+  </div>
+  <ul>
+    <li>Merge conflict = both sides changed the <b>same lines</b>. Git asks you to decide.</li>
+    <li>Edit the file, delete the marker lines, <code>git add</code>, <code>git commit</code></li>
+  </ul>
+  <div class="note">Conflicts are normal, not a sign you broke something. We will cause one on purpose.</div>
+</section>
+
+<!-- 16: REMOTES -->
+<section>
+  <div class="kicker git">Part 2 &middot; Remotes</div>
+  <h2>Your laptop &harr; GitHub</h2>
+  <div class="flow">
+    <div class="stage">local repo</div>
+    <div class="arrow">git push<br>&rarr;</div>
+    <div class="stage end">GitHub<br>(origin)</div>
+    <div class="arrow">git pull<br>&larr;</div>
+    <div class="stage">teammate's repo</div>
+  </div>
+  <p style="margin-top:22px; text-align:center;"><b>Branch &rarr; push &rarr; pull request &rarr; review &rarr; merge</b></p>
+  <div class="note">A pull request is where review and automated checks (linting, tests) happen.</div>
+</section>
+
+<!-- 17: HABITS -->
+<section>
+  <div class="kicker git">Part 2 &middot; Habits</div>
+  <h2>Small things that save you</h2>
+  <div class="cards">
+    <div class="card bad"><h3>Avoid</h3><div class="big">git commit -m "stuff"<br>git add .  # blindly<br>committing passwords</div></div>
+    <div class="card good"><h3>Do</h3><div class="big">"Add retry decorator"<br>git status first<br>.gitignore from day one</div></div>
+  </div>
+  <div class="note">Rule: never rewrite history other people already have (<code>reset</code>, <code>--amend</code>, force-push). Use <code>git revert</code> instead.</div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    center: false,
+    transition: 'slide',
+    width: 1100,
+    height: 700,
+    margin: 0.06
+  });
+</script>
+</body>
+</html>
