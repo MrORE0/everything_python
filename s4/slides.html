@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 4 — Type Hints &amp; Static Analysis</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/white.min.css" id="theme">
+
+<style>
+  :root{
+    --accent:#2b6cb0;
+    --accent2:#e0a800;
+    --ink:#1a1a1a;
+    --muted:#6b7280;
+    --code-bg:#f6f7f9;
+    --code-border:#e2e5ea;
+    --bad:#c0392b;
+    --good:#1e8449;
+  }
+  .reveal{ font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); }
+  .reveal .slides{ text-align:left; }
+  .reveal h1, .reveal h2, .reveal h3{
+    font-family: inherit; text-transform:none; letter-spacing:0;
+    color: var(--ink); font-weight:700;
+  }
+  .reveal h1{ font-size: 2.1em; }
+  .reveal h2{ font-size: 1.5em; border-bottom: 3px solid var(--accent2); padding-bottom:0.2em; margin-bottom:0.6em; display:inline-block;}
+  .reveal h3{ font-size:1.05em; color:var(--accent); margin-top:0.6em;}
+  .reveal p, .reveal li{ font-size: 0.72em; line-height:1.45; }
+  .reveal ul, .reveal ol{ margin-left: 0.4em; }
+  .reveal li{ margin-bottom:0.35em; }
+  .reveal section{ padding: 20px 40px; }
+
+  .kicker{ font-size:0.5em; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom: 0.3em; }
+  .accent{ color: var(--accent); }
+
+  .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items:start; }
+
+  .reveal pre{ box-shadow:none; width:100%; }
+  .reveal pre code{
+    background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 8px;
+    font-size: 0.62em; line-height:1.5; padding: 14px 16px; max-height:none;
+    font-family: "SF Mono", Menlo, Consolas, monospace; color:#24292e;
+  }
+  .reveal pre.err code{ background:#fff8f7; border-color:#f0c4be; color:#9b2c20; }
+  .reveal pre.ok code{ background:#f6fcf8; border-color:#bfe3cc; color:#1e6b3d; }
+  .kw{ color:#8250df; font-weight:600; }
+  .cmt{ color:#8a8f98; font-style:italic; }
+  .str{ color:#0a7d3e; }
+
+  .note{
+    font-size:0.55em; color: var(--muted); border-left:3px solid var(--accent2);
+    padding: 8px 14px; background:#fffbea; border-radius:0 6px 6px 0; margin-top:14px;
+  }
+
+  /* denser layout for text-heavy slides: room at bottom and right */
+  .reveal section.tight{ padding-bottom:50px; }
+  .reveal section.tight .note{ font-size:0.5em; margin-top:16px; margin-right:90px; }
+
+  .cards{ display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:16px; }
+  .card{ border:2px solid var(--code-border); border-radius:12px; padding:16px 22px; background:#fff; }
+  .card h3{ margin:0 0 6px 0; font-size:0.8em; }
+  .card .big{ font-size:0.8em; font-weight:700; line-height:1.3; font-family:"SF Mono", Menlo, Consolas, monospace; }
+
+  table.cmp{ border-collapse:collapse; font-size:0.62em; width:100%; margin-top:10px;}
+  table.cmp th, table.cmp td{ border:1px solid var(--code-border); padding:9px 14px; text-align:left; }
+  table.cmp th{ background:var(--code-bg); }
+  table.cmp code{ white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- 1: TITLE -->
+<section>
+  <div class="kicker">Python Beyond Coursework</div>
+  <h1>Week 4 — Type Hints<br>&amp; Static Analysis</h1>
+</section>
+
+<!-- 2: COLD OPEN -->
+<section>
+  <h2>Python does not check your types</h2>
+  <pre><code><span class="kw">def</span> double(x):
+    <span class="kw">return</span> x * 2
+
+print(double(21))
+print(double(<span class="str">"21"</span>))</code></pre>
+  <p style="font-size:0.7em; margin-top:0.2em;">Can you predict the output?</p>
+</section>
+
+<!-- 3: AGENDA -->
+<section>
+  <div class="kicker">Today's anchor points</div>
+  <h2>Type Hints &amp; Static Analysis</h2>
+  <div class="grid2">
+    <ul>
+      <li>Type hints: the syntax</li>
+      <li>mypy: catching bugs without running</li>
+      <li>Handling <code>None</code></li>
+    </ul>
+    <ul>
+      <li>Generics, <code>Callable</code>, <code>TypedDict</code></li>
+      <li><code>Protocol</code></li>
+      <li>Linters, formatters and CI</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 4: SYNTAX -->
+<section>
+  <div class="kicker">Anchor 1</div>
+  <h2>Type hints: the syntax</h2>
+  <pre><code>name: str = <span class="str">"Hamburg"</span>
+temps: list[float] = [12.0, 8.9]
+counts: dict[str, int] = {<span class="str">"Hamburg"</span>: 3}
+
+<span class="kw">def</span> greet(name: str, times: int = 1) -&gt; str:
+    <span class="kw">return</span> (f<span class="str">"Hello, {name}! "</span> * times).strip()</code></pre>
+  <ul>
+    <li>Hints are <b>not enforced</b> when the program runs</li>
+    <li>They are for humans, editors and tools like <b>mypy</b></li>
+  </ul>
+</section>
+
+<!-- 5: MYPY -->
+<section class="tight">
+  <div class="kicker">Anchor 2</div>
+  <h2>mypy: static analysis</h2>
+  <pre><code><span class="kw">def</span> double(x: int) -&gt; int:
+    <span class="kw">return</span> x * 2
+
+double(<span class="str">"21"</span>)</code></pre>
+  <pre class="err"><code>$ mypy demo.py
+demo.py:4: error: Argument 1 to "double" has incompatible
+  type "str"; expected "int"  [arg-type]</code></pre>
+  <div class="note"><b>Static</b> means checked without running the program. The bug is found before any user hits it.</div>
+</section>
+
+<!-- 6: NONE -->
+<section class="tight">
+  <div class="kicker">Anchor 3</div>
+  <h2>Handling <code>None</code></h2>
+  <div class="grid2">
+    <pre><code><span class="kw">def</span> mean_temp(station: str) -&gt; float | None:
+    <span class="kw">return</span> STATIONS.get(station)
+
+<span class="cmt"># mypy: could be None!</span>
+mean_temp(<span class="str">"Oslo"</span>) + 1
+
+<span class="cmt"># fix: handle None first</span>
+temp = mean_temp(<span class="str">"Oslo"</span>)
+<span class="kw">if</span> temp <span class="kw">is not</span> None:
+    temp + 1</code></pre>
+    <ul style="margin-top:0;">
+      <li><code>float | None</code> means "a float, or nothing"</li>
+      <li>mypy forces you to handle the missing case</li>
+      <li>One of the most common real-world crashes, caught before running</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 7: GENERICS + TYPEDDICT -->
+<section class="tight">
+  <div class="kicker">Anchor 4</div>
+  <h2>Generics, <code>Callable</code>, <code>TypedDict</code></h2>
+  <pre><code>Stats = tuple[float, float, float]          <span class="cmt"># (min, mean, max)</span>
+per_station: dict[str, Stats] = {}          <span class="cmt"># the billion-row result</span>
+
+<span class="kw">def</span> apply(f: Callable[[float], float], x: float) -&gt; float: ...
+
+<span class="kw">class</span> Reading(TypedDict):                    <span class="cmt"># the shape of a dict</span>
+    station: str
+    temperature: float</code></pre>
+  <div class="note">Back to earlier weeks: the billion-row stats, functions as objects, and JSON-like records. <code>TypedDict</code> catches key typos like <code>r["temprature"]</code>.</div>
+</section>
+
+<!-- 8: PROTOCOL -->
+<section class="tight">
+  <div class="kicker">Anchor 5</div>
+  <h2><code>Protocol</code>: duck typing, but checked</h2>
+  <div class="grid2">
+    <pre><code><span class="kw">class</span> Speaker(Protocol):
+    <span class="kw">def</span> speak(self) -&gt; str: ...
+
+<span class="kw">class</span> Dog:               <span class="cmt"># no inheritance</span>
+    <span class="kw">def</span> speak(self) -&gt; str:
+        <span class="kw">return</span> <span class="str">"Woof"</span>
+
+<span class="kw">def</span> announce(s: Speaker): ...
+
+announce(Dog())      <span class="cmt"># OK</span>
+announce(Rock())     <span class="cmt"># mypy error</span></code></pre>
+    <ul style="margin-top:0;">
+      <li>"Anything with a <code>speak()</code> method counts"</li>
+      <li>No base class needed, so it works with code you did not write</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9: LINTERS -->
+<section class="tight">
+  <div class="kicker">Tooling</div>
+  <h2>Three tools, three jobs</h2>
+  <table class="cmp">
+    <tr><th>Tool</th><th>Command</th><th>Catches</th></tr>
+    <tr><td><b>Type checker</b> (mypy)</td><td><code>mypy .</code></td><td>wrong types, missing <code>None</code> handling</td></tr>
+    <tr><td><b>Linter</b> (ruff)</td><td><code>ruff check .</code></td><td>unused imports and variables, likely mistakes</td></tr>
+    <tr><td><b>Formatter</b> (ruff)</td><td><code>ruff format .</code></td><td>spacing and layout, so nobody argues about style</td></tr>
+  </table>
+  <div class="note">Fast, automatic, and run on every commit: that is what keeps large codebases manageable.</div>
+</section>
+
+<!-- 10: CI SIDE NOTE -->
+<section class="tight">
+  <div class="kicker">Side note: your git workflow</div>
+  <h2>Run the checks on every push</h2>
+  <pre><code><span class="cmt"># .github/workflows/checks.yml</span>
+on: [push, pull_request]
+jobs:
+  lint-and-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - run: pip install ruff mypy
+      - run: ruff check .
+      - run: mypy .</code></pre>
+  <div class="note">GitHub runs this on every pull request (week 3's branch, push, pull request flow). We build the full version in week 10.</div>
+</section>
+
+<!-- 11: WHY IT MATTERS -->
+<section>
+  <div class="kicker">Industry relevance</div>
+  <h2>Why big codebases use this</h2>
+  <ul>
+    <li><b>Catches bugs early:</b> before running, before review, before users</li>
+    <li><b>Better editors:</b> autocomplete and safer refactoring</li>
+    <li><b>Easier collaboration:</b> signatures document themselves</li>
+    <li><b>Adopt gradually:</b> add hints file by file, tighten mypy over time</li>
+  </ul>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    controls: true,
+    progress: true,
+    center: false,
+    transition: 'slide',
+    width: 1100,
+    height: 700,
+    margin: 0.06
+  });
+</script>
+</body>
+</html>

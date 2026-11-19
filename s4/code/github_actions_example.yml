@@ -1,0 +1,18 @@
+# Example only -- not active. To use it, save as .github/workflows/checks.yml
+# at the ROOT of a repository. Week 10 builds a full workflow; this is the preview.
+name: checks
+
+on: [push, pull_request]        # run on every push and every pull request
+
+jobs:
+  lint-and-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff mypy
+      - run: ruff check .         # lint
+      - run: ruff format --check . # formatting
+      - run: mypy .               # types

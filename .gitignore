@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Tool caches (mypy, ruff)
+.mypy_cache/
+.ruff_cache/
+
+# Secrets (never commit these)
+.env
+
+# Generated data (week 2 billion-row problem)
+measurements.txt
+
+# macOS
+.DS_Store
